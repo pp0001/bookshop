@@ -1,0 +1,78 @@
+ID: bookshop
+_schema-version: "2.1"
+version: 0.0.3
+modules:
+  - name: bookshop-db
+    type: nodejs
+    path: db
+    parameters:
+      memory: 256M
+      disk-quota: 256M
+    requires:
+      - name: hdi-credentials
+        properties:
+          hdi_dynamic_deploy_user: ~{user}
+          hdi_dynamic_deploy_password: ~{password}
+    provides:
+      - name: dynamic_db_deployment
+        properties:
+          url: "${default-url}"
+  - name: bookshop-srv
+    type: java
+    path: srv
+    parameters:
+      memory: 1024M
+    provides:
+      - name: srv_api
+        properties:
+          url: ${default-url}
+    requires:
+      - name: bookshop-hdi-container
+        properties:
+          JBP_CONFIG_RESOURCE_CONFIGURATION: '[tomcat/webapps/ROOT/META-INF/context.xml:
+            {"service_name_for_DefaultDB" : "~{hdi-container-name}"}]'
+      - name: bookshop-uaa
+      - name: hdi-credentials
+        properties:
+          dynamic_db_deployment_user: ~{user}
+          dynamic_db_deployment_password: ~{password}
+      - name: dynamic_db_deployment
+        properties:
+          dynamic_db_deployment_url: ~{url}
+
+  - name: bookshop-app
+    type: html5
+    path: app
+    parameters:
+       disk-quota: 256M
+       memory: 256M
+    build-parameters:
+       builder: grunt
+    requires:
+     - name: bookshop-uaa
+     - name: srv_api
+       group: destinations
+       properties:
+          forwardAuthToken: true
+          strictSSL: false
+          name: srv_api
+          url: ~{url}
+    properties:
+      TENANT_HOST_PATTERN: "^(.*)-dev-bookshop-app.cfapps.eu10.hana.ondemand.com"
+
+resources:
+  - name: bookshop-hdi-container
+    type: com.sap.xs.managed-hdi-container
+    properties:
+      hdi-container-name: ${service-name}
+  - name: bookshop-uaa
+    type: org.cloudfoundry.managed-service
+    parameters:
+      path: ./xs-security.json
+      service-plan: application
+      service: xsuaa
+  - name: hdi-credentials
+    properties:
+      user: ${generated-user}
+      password: ${generated-password}
+

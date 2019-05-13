@@ -1,0 +1,14 @@
+{
+	"welcomeFile": "/app/test/flpSandbox.html",
+	"authenticationMethod": "route",
+	"routes": [{
+		"scope": "$XSAPPNAME.User",
+		"source": "/odata/v2",
+		"destination": "srv_api"
+	}, {
+		"scope": "$XSAPPNAME.User",
+		"source": "^/app/(.*)$",
+		"target": "$1",
+		"localDir": "webapp"
+	}]
+}
